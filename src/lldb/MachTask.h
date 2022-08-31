@@ -30,6 +30,7 @@ public:
   kern_return_t Resume();
 
   nub_size_t ReadMemory(nub_addr_t addr, nub_size_t size, void *buf);
+  nub_size_t WriteMemory(nub_addr_t addr, nub_size_t size, const void *buf);
 
   void TaskPortChanged(task_t task);
 

@@ -40,20 +40,25 @@ public:
     m_processSP->ReadMemory(addr, size, memory_data.data());
     return memory_data;
   }
+  void write_memory(uint64_t addr, uint8_t const *data, uint64_t size) { m_processSP->WriteMemory(addr, size, data); }
 
 private:
   pid_t m_pid;
   std::shared_ptr<MachProcess> m_processSP = nullptr;
 };
 
+constexpr uint64_t ADDR = 0x1002d4000;
 int main(int argc, const char *argv[]) {
   assert((argc == 2) && "argument count error");
   pid_t pid = std::atoi(argv[1]);
   DebuggerController controller{pid};
   controller.ptrace_attach();
   std::this_thread::sleep_for(std::chrono::seconds(1));
-  auto data = controller.read_memory(0x1002d4000, 12);
+  auto data = controller.read_memory(ADDR, 12);
   Logger::logDebug(data);
+  data[0] = 0;
+  data[1] = 0;
+  controller.write_memory(ADDR, data.data(), data.size());
   std::this_thread::sleep_for(std::chrono::seconds(1));
   controller.ptrace_detach();
 }

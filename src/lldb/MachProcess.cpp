@@ -71,16 +71,11 @@ bool MachProcess::Detach() {
 }
 
 nub_size_t MachProcess::ReadMemory(nub_addr_t addr, nub_size_t size, void *buf) {
-  // We need to remove any current software traps (enabled software
-  // breakpoints) that we may have placed in our tasks memory.
-
-  // First just read the memory as is
   nub_size_t bytes_read = m_task.ReadMemory(addr, size, buf);
-
-  // Then place any opcodes that fall into this range back into the buffer
-  // before we return this to callers.
-  // if (bytes_read > 0) m_breakpoints.RemoveTrapsFromBuffer(addr, bytes_read, buf);
   return bytes_read;
+}
+nub_size_t MachProcess::WriteMemory(nub_addr_t addr, nub_size_t size, const void *buf) {
+  return m_task.WriteMemory(addr, size, buf);
 }
 
 void MachProcess::ExceptionMessageReceived(const MachException::Message &exceptionMessage) {

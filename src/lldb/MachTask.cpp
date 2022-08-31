@@ -87,6 +87,12 @@ nub_size_t MachTask::ReadMemory(nub_addr_t addr, nub_size_t size, void *buf) {
   if (task != TASK_NULL) { n = m_vm_memory.Read(task, addr, buf, size); }
   return n;
 }
+nub_size_t MachTask::WriteMemory(nub_addr_t addr, nub_size_t size, const void *buf) {
+  nub_size_t n = 0;
+  task_t task = TaskPort();
+  if (task != TASK_NULL) { n = m_vm_memory.Write(task, addr, buf, size); }
+  return n;
+}
 
 void MachTask::TaskPortChanged(task_t task) { m_task = task; }
 

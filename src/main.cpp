@@ -8,6 +8,7 @@
 #include <iostream>
 #include <memory>
 #include <sys/ptrace.h>
+#include <sys/signal.h>
 #include <thread>
 #include <vector>
 
@@ -17,22 +18,24 @@ public:
 
   ~DebuggerController() {}
 
-  void ptrace_attach() {
-    pid_t pid = INVALID_NUB_PROCESS;
+  void attach() {
     m_processSP = std::make_shared<MachProcess>();
-    char err_str[1024];
     IgnoredExceptions ignores{EXC_MASK_BAD_ACCESS, EXC_MASK_BAD_INSTRUCTION, EXC_MASK_ARITHMETIC};
-    pid = m_processSP->AttachForDebug(m_pid, ignores, &err_str[0], 1024);
-    if (pid == INVALID_NUB_PROCESS) {
-      std::cout << err_str << "\n";
-      std::exit(-1);
-    }
-    printf("attach process pid:%d\n", m_pid);
+    m_processSP->Attach(m_pid, ignores);
+    Logger::logInfo("attach process pid", m_pid);
+  }
+  void detach() {
+    m_processSP->Detach();
+    Logger::logInfo("detach process pid", m_pid);
   }
 
-  void ptrace_detach() {
-    assert(m_processSP->Detach());
-    printf("dettach process pid:%d\n", m_pid);
+  void resume() {
+    m_processSP->Resume();
+    Logger::logInfo("resume process pid", m_pid);
+  }
+  void stop() {
+    m_processSP->Stop();
+    Logger::logInfo("stop process pid", m_pid);
   }
 
   std::vector<uint8_t> read_memory(uint64_t addr, uint64_t size) {
@@ -48,17 +51,24 @@ private:
 };
 
 constexpr uint64_t ADDR = 0x1002d4000;
+
 int main(int argc, const char *argv[]) {
   assert((argc == 2) && "argument count error");
   pid_t pid = std::atoi(argv[1]);
   DebuggerController controller{pid};
-  controller.ptrace_attach();
+  controller.attach();
   std::this_thread::sleep_for(std::chrono::seconds(1));
   auto data = controller.read_memory(ADDR, 12);
   Logger::logDebug(data);
   data[0] = 0;
   data[1] = 0;
   controller.write_memory(ADDR, data.data(), data.size());
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-  controller.ptrace_detach();
+  for (int i = 0; i < 5; i++) {
+    controller.resume();
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    controller.stop();
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+  }
+  controller.resume();
+  controller.detach();
 }

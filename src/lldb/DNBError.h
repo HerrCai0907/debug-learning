@@ -15,7 +15,10 @@
 
 #include <cerrno>
 #include <cstdio>
+#include <cstdlib>
+#include <iostream>
 #include <mach/mach.h>
+#include <ostream>
 #include <string>
 
 class DNBError {
@@ -26,10 +29,11 @@ public:
   explicit DNBError(ValueType err = 0, FlavorType flavor = Generic) : m_err(err), m_flavor(flavor) {}
 
   const char *AsString() const;
-  void Clear() {
+  DNBError Clear() {
     m_err = 0;
     m_flavor = Generic;
     m_str.clear();
+    return *this;
   }
   ValueType Status() const { return m_err; }
   FlavorType Flavor() const { return m_flavor; }
@@ -47,10 +51,11 @@ public:
     m_str.clear();
   }
 
-  void SetErrorToErrno() {
+  DNBError SetErrorToErrno() {
     m_err = errno;
     m_flavor = POSIX;
     m_str.clear();
+    return *this;
   }
 
   void SetError(ValueType err, FlavorType flavor) {
@@ -60,14 +65,25 @@ public:
   }
 
   // Generic errors can set their own string values
-  void SetErrorString(const char *err_str) {
-    if (err_str && err_str[0])
+  DNBError SetErrorString(const char *err_str) {
+    if (err_str && err_str[0]) {
       m_str = err_str;
-    else
+    } else {
       m_str.clear();
+    }
+    return *this;
   }
   bool Success() const { return m_err == 0; }
   bool Fail() const { return m_err != 0; }
+
+  void check() {
+    if (Fail()) {
+      std::cerr << *this << "\n";
+      std::exit(-1);
+    }
+  }
+
+  friend std::ostream &operator<<(std::ostream &os, DNBError &self) { return os << self.AsString(); }
 
 protected:
   ValueType m_err;

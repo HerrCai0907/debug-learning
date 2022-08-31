@@ -17,8 +17,7 @@
 #endif
 
 const char *DNBError::AsString() const {
-  if (Success()) return NULL;
-
+  if (Success()) return "success";
   if (m_str.empty()) {
     const char *s = NULL;
     switch (m_flavor) {
@@ -28,6 +27,6 @@ const char *DNBError::AsString() const {
     }
     if (s) m_str.assign(s);
   }
-  if (m_str.empty()) return NULL;
+  if (m_str.empty()) return "unknown";
   return m_str.c_str();
 }

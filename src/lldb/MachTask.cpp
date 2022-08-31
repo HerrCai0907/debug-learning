@@ -81,6 +81,13 @@ kern_return_t MachTask::Resume() {
   return err.Status();
 }
 
+nub_size_t MachTask::ReadMemory(nub_addr_t addr, nub_size_t size, void *buf) {
+  nub_size_t n = 0;
+  task_t task = TaskPort();
+  if (task != TASK_NULL) { n = m_vm_memory.Read(task, addr, buf, size); }
+  return n;
+}
+
 void MachTask::TaskPortChanged(task_t task) { m_task = task; }
 
 task_t MachTask::TaskPortForProcessID(DNBError &err, bool force) {

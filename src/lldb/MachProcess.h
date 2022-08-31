@@ -18,6 +18,8 @@ public:
   pid_t AttachForDebug(pid_t pid, const IgnoredExceptions &ignored_exceptions, char *err_str, size_t err_len);
   bool Detach();
 
+  nub_size_t ReadMemory(nub_addr_t addr, nub_size_t size, void *buf);
+
   void ExceptionMessageReceived(const MachException::Message &exceptionMessage);
   void ReplyToAllExceptions();
 

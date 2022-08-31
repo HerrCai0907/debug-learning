@@ -18,4 +18,4 @@ add_custom_command(
           ${CMAKE_CURRENT_SOURCE_DIR}/dbgnub-mig.defs
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dbgnub-mig.defs)
 
-add_library(lldb_lib STATIC ${lldb_sources} ${generated_mach_interfaces})
+add_library(lldb STATIC ${lldb_sources} ${generated_mach_interfaces})

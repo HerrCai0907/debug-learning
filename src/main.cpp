@@ -1,5 +1,7 @@
 #include "lldb/DNBDefs.h"
 #include "lldb/MachProcess.h"
+#include "logger.hpp"
+#include <_types/_uint64_t.h>
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
@@ -7,6 +9,7 @@
 #include <memory>
 #include <sys/ptrace.h>
 #include <thread>
+#include <vector>
 
 class DebuggerController {
 public:
@@ -32,6 +35,12 @@ public:
     printf("dettach process pid:%d\n", m_pid);
   }
 
+  std::vector<uint8_t> read_memory(uint64_t addr, uint64_t size) {
+    std::vector<uint8_t> memory_data(size);
+    m_processSP->ReadMemory(addr, size, memory_data.data());
+    return memory_data;
+  }
+
 private:
   pid_t m_pid;
   std::shared_ptr<MachProcess> m_processSP = nullptr;
@@ -42,6 +51,9 @@ int main(int argc, const char *argv[]) {
   pid_t pid = std::atoi(argv[1]);
   DebuggerController controller{pid};
   controller.ptrace_attach();
-  std::this_thread::sleep_for(std::chrono::seconds(3));
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  auto data = controller.read_memory(0x1002d4000, 12);
+  Logger::logDebug(data);
+  std::this_thread::sleep_for(std::chrono::seconds(1));
   controller.ptrace_detach();
 }

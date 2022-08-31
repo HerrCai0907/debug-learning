@@ -53,8 +53,7 @@ pid_t MachProcess::AttachForDebug(pid_t pid, const IgnoredExceptions &ignored_ex
 bool MachProcess::Detach() {
   // uint32_t thread_idx = UINT32_MAX;
   // nub_state_t state = DoSIGSTOP(true, true, &thread_idx);
-  // ReplyToAllExceptions();
-  // if DoSIGSTOP then not reply exceptions. otherwise reply 0
+  // ReplyToAllExceptions(); // if DoSIGSTOP then not reply exceptions. otherwise reply 0
   m_task.ShutDownExcecptionThread();
   // Detach from our process
   errno = 0;
@@ -69,6 +68,19 @@ bool MachProcess::Detach() {
   assert(err.Success());
   // Clear out any notion of the process we once were
   return true;
+}
+
+nub_size_t MachProcess::ReadMemory(nub_addr_t addr, nub_size_t size, void *buf) {
+  // We need to remove any current software traps (enabled software
+  // breakpoints) that we may have placed in our tasks memory.
+
+  // First just read the memory as is
+  nub_size_t bytes_read = m_task.ReadMemory(addr, size, buf);
+
+  // Then place any opcodes that fall into this range back into the buffer
+  // before we return this to callers.
+  // if (bytes_read > 0) m_breakpoints.RemoveTrapsFromBuffer(addr, bytes_read, buf);
+  return bytes_read;
 }
 
 void MachProcess::ExceptionMessageReceived(const MachException::Message &exceptionMessage) {

@@ -3,6 +3,7 @@
 #include "DNBDefs.h"
 #include "DNBError.h"
 #include "MachException.h"
+#include "MachVMMemory.h"
 #include "ignoredExceptions.h"
 #include <mach/mach.h>
 #include <mach/mach_types.h>
@@ -28,6 +29,8 @@ public:
   kern_return_t Suspend();
   kern_return_t Resume();
 
+  nub_size_t ReadMemory(nub_addr_t addr, nub_size_t size, void *buf);
+
   void TaskPortChanged(task_t task);
 
   bool IsValid() const;
@@ -47,4 +50,6 @@ private:
   MachException::PortInfo m_exc_port_info;       // Saved settings for all exception ports
   mach_port_t m_exception_port = MACH_PORT_NULL; // Exception port on which we will receive child exceptions
   pthread_t m_exception_thread = 0;              // Thread ID for the exception thread in case we need it
+  MachVMMemory m_vm_memory;                      // Special mach memory reading class that will take
+                                                 // care of watching for page and region boundaries
 };

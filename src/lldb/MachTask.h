@@ -20,6 +20,7 @@ public:
   mach_port_t ExceptionPort() const { return m_exception_port; }
 
   bool StartExceptionThread(const IgnoredExceptions &ignored_exceptions, DNBError &err);
+  kern_return_t ShutDownExcecptionThread();
 
   kern_return_t SaveExceptionPortInfo();
   kern_return_t RestoreExceptionPortInfo();

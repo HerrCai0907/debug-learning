@@ -16,8 +16,10 @@ public:
   const MachTask &Task() const { return m_task; }
 
   pid_t AttachForDebug(pid_t pid, const IgnoredExceptions &ignored_exceptions, char *err_str, size_t err_len);
+  bool Detach();
 
   void ExceptionMessageReceived(const MachException::Message &exceptionMessage);
+  void ReplyToAllExceptions();
 
 private:
   pid_t m_pid = INVALID_NUB_PROCESS;                         // Process ID of child process

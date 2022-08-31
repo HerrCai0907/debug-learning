@@ -15,6 +15,7 @@
 #include "MachProcess.h"
 #include "MachTask.h"
 #include <cerrno>
+#include <iostream>
 #include <sys/ptrace.h>
 #include <sys/types.h>
 
@@ -146,19 +147,19 @@ kern_return_t MachException::Message::Reply(MachProcess *process, int signal) {
     } else {
       err = ::pid_for_task(state.task_port, &state_pid);
     }
-
     assert(state_pid != -1);
-    if (state_pid != -1) {
-      errno = 0;
-      if (::ptrace(PT_THUPDATE, state_pid, (caddr_t)((uintptr_t)state.thread_port), soft_signal) != 0)
-        err.SetError(errno, DNBError::POSIX);
-      else
-        err.Clear();
+    errno = 0;
+    if (::ptrace(PT_THUPDATE, state_pid, (caddr_t)((uintptr_t)state.thread_port), soft_signal) != 0) {
+      err.SetError(errno, DNBError::POSIX);
+      if (err.Fail()) { std::cout << "[MachException::Message::Reply::ptrace]" << err.AsString() << "\n"; }
+    } else {
+      err.Clear();
     }
   }
 
   err = ::mach_msg(&reply_msg.hdr, MACH_SEND_MSG | MACH_SEND_INTERRUPT, reply_msg.hdr.msgh_size, 0, MACH_PORT_NULL,
                    MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
+  if (err.Fail()) { std::cout << "[MachException::Message::Reply::mach_msg]" << err.AsString() << "\n"; }
   return err.Status();
 }
 

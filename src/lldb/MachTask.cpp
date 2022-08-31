@@ -5,7 +5,6 @@
 
 bool MachTask::StartExceptionThread(const IgnoredExceptions &ignored_exceptions, DNBError &err) {
   task_t task = TaskPortForProcessID(err);
-  std::cout << task << "\n";
   if (MachTask::IsValid(task)) {
     // Got the mach port for the current process
     mach_port_t task_self = mach_task_self();
@@ -36,6 +35,21 @@ bool MachTask::StartExceptionThread(const IgnoredExceptions &ignored_exceptions,
     return err.Success();
   }
   return false;
+}
+kern_return_t MachTask::ShutDownExcecptionThread() {
+  DNBError err;
+  err = RestoreExceptionPortInfo();
+  // NULL our our exception port and let our exception thread exit
+  mach_port_t exception_port = m_exception_port;
+  m_exception_port = 0;
+  err.SetError(::pthread_cancel(m_exception_thread), DNBError::POSIX);
+  assert(err.Success());
+  err.SetError(::pthread_join(m_exception_thread, NULL), DNBError::POSIX);
+  assert(err.Success());
+  // Deallocate our exception port that we used to track our child process
+  mach_port_t task_self = mach_task_self();
+  err = ::mach_port_deallocate(task_self, exception_port);
+  return err.Status();
 }
 
 kern_return_t MachTask::SaveExceptionPortInfo() { return m_exc_port_info.Save(TaskPort()); }
@@ -155,13 +169,13 @@ void *MachTask::ExceptionThread(void *arg) {
       // No timeout, just receive as many exceptions as we can since we already
       // have one and we want
       // to get all currently available exceptions for this task
-      std::cout << "receive timeout" << 1 << "\n";
+      std::cout << "receive timeout " << 1 << "\n";
       err = exception_message.Receive(mach_task->ExceptionPort(), MACH_RCV_MSG | MACH_RCV_INTERRUPT | MACH_RCV_TIMEOUT,
                                       1);
     } else if (periodic_timeout > 0) {
       // We need to stop periodically in this loop, so try and get a mach
       // message with a valid timeout (ms)
-      std::cout << "receive timeout" << periodic_timeout << "\n";
+      std::cout << "receive timeout " << periodic_timeout << "\n";
       err = exception_message.Receive(mach_task->ExceptionPort(), MACH_RCV_MSG | MACH_RCV_INTERRUPT | MACH_RCV_TIMEOUT,
                                       periodic_timeout);
     } else {
@@ -187,7 +201,6 @@ void *MachTask::ExceptionThread(void *arg) {
       }
     } else if (err.Status() == MACH_RCV_TIMED_OUT) {
       std::cout << "MACH_RCV_TIMED_OUT\n";
-      std::cout << num_exceptions_received << " num_exceptions_received\n";
       if (num_exceptions_received > 0) {
         // We were receiving all current exceptions with a timeout of zero
         // it is time to go back to our normal looping mode
@@ -213,7 +226,7 @@ void *MachTask::ExceptionThread(void *arg) {
     } else if (err.Status() != KERN_SUCCESS) {
       // TODO: notify of error?
     } else {
-      std::cout << "exception_message.Receive success\n";
+      std::cout << "receive success\n";
       if (exception_message.CatchExceptionRaise(task)) {
         if (exception_message.state.task_port != task) {
           if (exception_message.state.IsValid()) {

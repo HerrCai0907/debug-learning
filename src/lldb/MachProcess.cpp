@@ -74,6 +74,25 @@ nub_size_t MachProcess::WriteMemory(nub_addr_t addr, nub_size_t size, const void
   return m_task.WriteMemory(addr, size, buf);
 }
 
+std::vector<arm_thread_state64_t> MachProcess::ReadRegister() {
+  std::vector<arm_thread_state64_t> registers{};
+  DNBError err;
+  thread_array_t thread_list = NULL;
+  mach_msg_type_number_t thread_list_count = 0;
+  err = ::task_threads(m_task.TaskPort(), &thread_list, &thread_list_count);
+  if (err.Fail()) { throw std::runtime_error(err.AsString()); }
+  for (mach_msg_type_number_t i = 0; i < thread_list_count; i++) {
+    thread_t thread = thread_list[i];
+    mach_msg_type_number_t count = ARM_THREAD_STATE64_COUNT;
+    arm_thread_state64_t gpr;
+    err = ::thread_get_state(thread, ARM_THREAD_STATE64, (thread_state_t)&gpr, &count);
+    if (err.Fail()) { throw std::runtime_error(err.AsString()); }
+    std::cout << "$pc in " << thread << " is " << arm_thread_state64_get_pc(gpr) << "\n";
+    registers.emplace_back(gpr);
+  }
+  return registers;
+}
+
 void MachProcess::ExceptionMessageReceived(const MachException::Message &exceptionMessage) {
   if (m_exception_messages.empty()) m_task.Suspend();
   // Use a locker to automatically unlock our mutex in case of exceptions

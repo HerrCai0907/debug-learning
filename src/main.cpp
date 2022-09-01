@@ -2,6 +2,7 @@
 #include "lldb/MachProcess.h"
 #include "logger.hpp"
 #include <_types/_uint64_t.h>
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
@@ -45,12 +46,20 @@ public:
   }
   void write_memory(uint64_t addr, uint8_t const *data, uint64_t size) { m_processSP->WriteMemory(addr, size, data); }
 
+  std::vector<uint64_t> read_pc() {
+    std::vector<arm_thread_state64_t> regs = m_processSP->ReadRegister();
+    std::vector<uint64_t> pcs(regs.size());
+    std::transform(regs.begin(), regs.end(), pcs.begin(),
+                   [](arm_thread_state64_t const &it) { return arm_thread_state64_get_pc(it); });
+    return pcs;
+  }
+
 private:
   pid_t m_pid;
   std::shared_ptr<MachProcess> m_processSP = nullptr;
 };
 
-constexpr uint64_t ADDR = 0x1002d4000;
+constexpr uint64_t ADDR = 0x104910000;
 
 int main(int argc, const char *argv[]) {
   assert((argc == 2) && "argument count error");
@@ -66,6 +75,8 @@ int main(int argc, const char *argv[]) {
   for (int i = 0; i < 5; i++) {
     controller.resume();
     std::this_thread::sleep_for(std::chrono::seconds(2));
+    auto pcs = controller.read_pc();
+    Logger::logInfo("pc register:", pcs);
     controller.stop();
     std::this_thread::sleep_for(std::chrono::seconds(2));
   }

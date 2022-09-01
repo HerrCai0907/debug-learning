@@ -4,8 +4,11 @@
 #include "MachTask.h"
 #include "ignoredExceptions.h"
 #include <csignal>
+#include <mach/mach_types.h>
+#include <mach/message.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <vector>
 
 class MachProcess {
 public:
@@ -29,6 +32,8 @@ public:
 
   nub_size_t ReadMemory(nub_addr_t addr, nub_size_t size, void *buf);
   nub_size_t WriteMemory(nub_addr_t addr, nub_size_t size, const void *buf);
+
+  std::vector<arm_thread_state64_t> ReadRegister();
 
   void ExceptionMessageReceived(const MachException::Message &exceptionMessage);
 

@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <mach/arm/thread_status.h>
 #include <stdexcept>
 #include <string>
 #include <sys/errno.h>
@@ -58,6 +59,15 @@ void MachProcess::Stop() {
   m_status = ProcessStatus::STOP;
 }
 
+void MachProcess::SingleStep() {
+  assert(m_status == ProcessStatus::STOP);
+  m_single_step = true;
+  m_task.EnableSingleStep();
+  Resume();
+  while (m_single_step) {} // wait until m_single_step change to false
+  m_status = ProcessStatus::STOP;
+}
+
 void MachProcess::Signal(int signal) {
   DNBError err;
   errno = 0;
@@ -87,7 +97,6 @@ std::vector<arm_thread_state64_t> MachProcess::ReadRegister() {
     arm_thread_state64_t gpr;
     err = ::thread_get_state(thread, ARM_THREAD_STATE64, (thread_state_t)&gpr, &count);
     if (err.Fail()) { throw std::runtime_error(err.AsString()); }
-    std::cout << "$pc in " << thread << " is " << arm_thread_state64_get_pc(gpr) << "\n";
     registers.emplace_back(gpr);
   }
   return registers;
@@ -95,8 +104,10 @@ std::vector<arm_thread_state64_t> MachProcess::ReadRegister() {
 
 void MachProcess::ExceptionMessageReceived(const MachException::Message &exceptionMessage) {
   if (m_exception_messages.empty()) m_task.Suspend();
-  // Use a locker to automatically unlock our mutex in case of exceptions
-  // Add the exception to our internal exception stack
+  if (m_single_step) {
+    m_task.DisableSingleStep();
+    m_single_step = false;
+  }
   m_exception_messages.push_back(exceptionMessage);
 }
 

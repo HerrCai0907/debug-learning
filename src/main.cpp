@@ -38,6 +38,10 @@ public:
     m_processSP->Stop();
     Logger::logInfo("stop process pid", m_pid);
   }
+  void single_step() {
+    m_processSP->SingleStep();
+    Logger::logInfo("single step pid", m_pid);
+  }
 
   std::vector<uint8_t> read_memory(uint64_t addr, uint64_t size) {
     std::vector<uint8_t> memory_data(size);
@@ -72,13 +76,16 @@ int main(int argc, const char *argv[]) {
   data[0] = 0;
   data[1] = 0;
   controller.write_memory(ADDR, data.data(), data.size());
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 3; i++) {
     controller.resume();
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    auto pcs = controller.read_pc();
-    Logger::logInfo("pc register:", pcs);
     controller.stop();
     std::this_thread::sleep_for(std::chrono::seconds(2));
+  }
+  for (int i = 0; i < 100; i++) {
+    controller.single_step();
+    auto pcs = controller.read_pc();
+    Logger::logInfo("pc register:", pcs);
   }
   controller.resume();
   controller.detach();

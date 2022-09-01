@@ -2,6 +2,7 @@
 #include "MachProcess.h"
 #include <cassert>
 #include <iostream>
+#include <mach/thread_act.h>
 
 bool MachTask::StartExceptionThread(const IgnoredExceptions &ignored_exceptions, DNBError &err) {
   task_t task = TaskPortForProcessID(err);
@@ -254,4 +255,40 @@ void *MachTask::ExceptionThread(void *arg) {
     }
   }
   return NULL;
+}
+
+constexpr uint32_t SS_ENABLE = 1u;
+void MachTask::EnableSingleStep() {
+  DNBError err;
+  thread_array_t thread_list = NULL;
+  mach_msg_type_number_t thread_list_count = 0;
+  err = ::task_threads(m_task, &thread_list, &thread_list_count);
+  if (err.Fail()) { throw std::runtime_error(err.AsString()); }
+  for (mach_msg_type_number_t i = 0; i < thread_list_count; i++) {
+    thread_t thread = thread_list[i];
+    mach_msg_type_number_t count = ARM_DEBUG_STATE64_COUNT;
+    arm_debug_state64_t dbg;
+    err = ::thread_get_state(thread, ARM_DEBUG_STATE64, (thread_state_t)&dbg, &count);
+    if (err.Fail()) { throw std::runtime_error(err.AsString()); }
+    dbg.__mdscr_el1 |= SS_ENABLE;
+    err = ::thread_set_state(thread, ARM_DEBUG_STATE64, (thread_state_t)&dbg, count);
+    if (err.Fail()) { throw std::runtime_error(err.AsString()); }
+  }
+}
+void MachTask::DisableSingleStep() {
+  DNBError err;
+  thread_array_t thread_list = NULL;
+  mach_msg_type_number_t thread_list_count = 0;
+  err = ::task_threads(m_task, &thread_list, &thread_list_count);
+  if (err.Fail()) { throw std::runtime_error(err.AsString()); }
+  for (mach_msg_type_number_t i = 0; i < thread_list_count; i++) {
+    thread_t thread = thread_list[i];
+    mach_msg_type_number_t count = ARM_DEBUG_STATE64_COUNT;
+    arm_debug_state64_t dbg;
+    err = ::thread_get_state(thread, ARM_DEBUG_STATE64, (thread_state_t)&dbg, &count);
+    if (err.Fail()) { throw std::runtime_error(err.AsString()); }
+    dbg.__mdscr_el1 &= ~SS_ENABLE;
+    err = ::thread_set_state(thread, ARM_DEBUG_STATE64, (thread_state_t)&dbg, count);
+    if (err.Fail()) { throw std::runtime_error(err.AsString()); }
+  }
 }

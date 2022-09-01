@@ -45,6 +45,9 @@ public:
 
   static void *ExceptionThread(void *arg);
 
+  void EnableSingleStep();
+  void DisableSingleStep();
+
 private:
   MachProcess *m_process; // The mach process that owns this MachTask
   task_t m_task = TASK_NULL;

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(ptrace-learn)
+project(debug-learn)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -12,4 +12,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 # enable_testing() include(GoogleTest)
 
-add_subdirectory(src)
+if (apple)
+    add_subdirectory(mac_ptrace)
+endif()
